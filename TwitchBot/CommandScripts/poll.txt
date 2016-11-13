@@ -1,0 +1,253 @@
+﻿/* Changelog
+ * 0.1: Initial release
+ */
+
+// Import the classes from the main executable
+using TwitchBot;
+
+using System;						// String.Format
+using System.IO;					// File.ReadAllLines
+using System.Collections.Generic;	// List
+
+public class CommandClass : Command
+{
+	bool hasTitle = false;
+	bool isLive = false;
+	string title;
+	List<string> options;
+	DateTime cutoff;
+
+	List<string> voted;
+	int[] votecount = null;
+
+	public void NewPollHandler(string username, string command, string message)
+	{
+		// If the user is not a mod, return an error message
+		if (!CommandAPI.isMod(username))
+		{
+			CommandAPI.SendMessage(String.Format("You are not a moderator @{0}!", username));
+			return;
+		}
+
+		// Check if the poll has expired
+		if (cutoff.CompareTo(DateTime.Now) <= 0 && isLive)
+		{
+			// Vote is no longer live
+			isLive = false;
+			hasTitle = false;
+
+			// Print the results
+			ResultsHandler(username, command, message);
+		}
+
+		// Ensure a poll isn't live
+		if (isLive)
+		{
+			CommandAPI.SendMessage("Please wait for the current poll to finish before starting another.");
+			return;
+		}
+
+		// Set the new title and clear the options
+		hasTitle = true;
+		title = message;
+		options = new List<string>();
+		votecount = null;
+
+		// Feedback to the user?
+		CommandAPI.SendMessage("Title set");
+	}
+
+	public void AddVoteHandler(string username, string command, string message)
+	{
+		// If the user is not a mod, return an error message
+		if (!CommandAPI.isMod(username))
+		{
+			CommandAPI.SendMessage(String.Format("You are not a moderator @{0}!", username));
+			return;
+		}
+
+		// Ensure a title has been set
+		if (!hasTitle)
+		{
+			CommandAPI.SendMessage("Please set a title first!");
+			return;
+		}
+
+		// Ensure we're not live
+		if (isLive)
+		{
+			CommandAPI.SendMessage("You can't add options while a poll is live");
+			return;
+		}
+
+		// Add the option
+		options.Add(message);
+
+		// Feedback to the user?
+		CommandAPI.SendMessage("Option added");
+	}
+
+	public void StartPollHandler(string username, string command, string message)
+	{
+		// If the user is not a mod, return an error message
+		if (!CommandAPI.isMod(username))
+		{
+			CommandAPI.SendMessage(String.Format("You are not a moderator @{0}!", username));
+			return;
+		}
+
+		// Make sure no poll is live
+		if (isLive)
+		{
+			CommandAPI.SendMessage("There is already a live poll!");
+			return;
+		}
+
+		// Ensure a title has been set
+		if (!hasTitle)
+		{
+			CommandAPI.SendMessage("Please set a title first!");
+			return;
+		}
+
+		// Ensure at least two options have been set
+		if (options.Count < 2)
+		{
+			CommandAPI.SendMessage("Please add at least 2 options!");
+			return;
+		}
+
+		// See if a duration has been set, default to 60 seconds
+		int duration = 60;
+		if (message != "")
+		{
+			try {
+				duration = Int32.Parse(message);
+			} catch (Exception e)
+			{
+				// Suppress the compiler warning
+				e.ToString();
+			}
+		}
+
+		// Set the cutoff variable
+		cutoff = DateTime.Now.AddSeconds(duration);
+		isLive = true;
+
+		// Set the state variables
+		voted = new List<string>();
+		votecount = new int[options.Count];
+
+		CommandAPI.SendMessage(String.Format("Poll is live: {0}", title));
+		for (int i = 0; i < options.Count; i++)
+		{
+			CommandAPI.SendMessage(String.Format("{0}: {1}", i+1, options[i]));
+		}
+		CommandAPI.SendMessage(String.Format("Type !vote <number> to vote - you have {0} seconds. Go!", duration));
+	}
+
+	public void VoteHandler(string username, string command, string message)
+	{
+		// Check a vote is live
+		if (!isLive)
+		{
+			CommandAPI.SendMessage(String.Format("There is no live poll @{0}", username));
+			return;
+		}
+
+		// Check if the poll has expired
+		if (cutoff.CompareTo(DateTime.Now) <= 0)
+		{
+			// Vote is no longer live
+			isLive = false;
+			hasTitle = false;
+
+			CommandAPI.SendMessage(String.Format("There is no live poll @{0}", username));
+			return;
+		}
+
+		// Check if the user has voted
+		foreach (String s in voted)
+		{
+			if (username.Equals(s))
+			{
+				CommandAPI.SendMessage(String.Format("You have already voted in this poll, @{0}!", username));
+				return;
+			}
+		}
+
+		// Check the message to see if a valid vote has been cast
+		int vote = 0;
+		try {
+			vote = Int32.Parse(message);
+		} catch (Exception e)
+		{
+			CommandAPI.SendMessage(String.Format("Sorry @{0}, your vote was incorrectly formatted! Type !vote <number> to cast your vote", username));
+			return;
+		}
+
+		// Check the vote is in the valid range
+		if (vote < 1 || vote > options.Count)
+		{
+			CommandAPI.SendMessage(String.Format("Sorry @{0} your vote wasn't in the valid range!", username));
+			return;
+		}
+
+		// Account for the vote and add the voter to the list of users who have voted
+		voted.Add(username);
+		votecount[vote-1]++;
+
+		// Thank the user
+		CommandAPI.SendMessage(String.Format("Thanks for your vote, @{0}!", username));
+	}
+
+	public void ResultsHandler(string username, string command, string message)
+	{
+		// Check if a poll is live and needs to be finished
+		if (isLive)
+		{
+			if (cutoff.CompareTo(DateTime.Now) <= 0)
+			{
+				// Vote is no longer live
+				isLive = false;
+				hasTitle = false;
+			}
+		}
+
+		// Check the poll data is valid
+		if (votecount == null)
+		{
+			CommandAPI.SendMessage("There is no poll to retrieve results from yet!");
+			return;
+		}
+
+		// Output the results
+		CommandAPI.SendMessage(String.Format("Results for: {0}", title));
+		for (int i = 0; i < options.Count; i++)
+		{
+			CommandAPI.SendMessage(String.Format("{0} - {1} votes", options[i], votecount[i]));
+		}
+
+		// Check if the vote is still live and state how many seconds are left
+		if (isLive)
+		{
+			int timeleft;
+			timeleft = (int)cutoff.Subtract(DateTime.Now).TotalSeconds;
+			CommandAPI.SendMessage(String.Format("There are {0} seconds left to vote. Go!", timeleft));
+		} else {
+			CommandAPI.SendMessage("This poll is closed.");
+		}
+	}
+
+	public void setup()
+	{
+		// Register the chat command handlers
+		CommandAPI.AddChatHandler("newpoll", "Sets up a new poll", NewPollHandler, true);
+		CommandAPI.AddChatHandler("addvote", "Adds a vote to a poll", AddVoteHandler, true);
+		CommandAPI.AddChatHandler("startpoll", "Starts the poll with optional duration argument in seconds", StartPollHandler, true);
+		CommandAPI.AddChatHandler("vote", "Casts your vote on a live poll", VoteHandler);
+		CommandAPI.AddChatHandler("results", "Shows the results of a live, or the most recent poll", ResultsHandler);
+
+		// Register the console command handler(s)
+	}
+}

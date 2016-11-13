@@ -1,0 +1,47 @@
+﻿/* Changelog
+ * 0.1:		Initial release
+ */
+
+// Import the classes from the main executable
+using TwitchBot;
+
+using System;		// String.Format
+
+public class CommandClass : Command
+{
+	string gametext = "";
+
+	public void GameHandler(string username, string command, string message)
+	{
+		// Send the gametext
+		if (gametext != "")
+			CommandAPI.SendMessage(String.Format("The current game is: {0}", gametext));
+		else
+			CommandAPI.SendMessage(String.Format("No game details have been provided yet, sorry @{0}!", username));
+	}
+
+	public void SetGameHandler(string username, string command, string message)
+	{
+		// Ensure the user is a mod
+		if (!CommandAPI.isMod(username))
+		{
+			CommandAPI.SendMessage(String.Format("You are not a moderator, @{0}!", username));
+			return;
+		}
+
+		// Set the game text
+		gametext = message;
+
+		// Output that the details have been updated
+		CommandAPI.SendMessage("Game details updated");
+	}
+
+	public void setup()
+	{
+		// Register the chat command handler
+		CommandAPI.AddChatHandler("game", "Gives details about the current game", GameHandler);
+		CommandAPI.AddChatHandler("setgame", "Sets the current game details", SetGameHandler, true);
+
+		// Register the console command handler(s)
+	}
+}

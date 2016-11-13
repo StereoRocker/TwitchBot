@@ -1,0 +1,163 @@
+﻿/* Changelist
+ * 0.2:		Changed the output format to include "/me" as a prefix
+ * 0.1:		Initial release
+ */
+
+// Import the classes from the main executable
+using TwitchBot;
+
+using System;						// Random
+using System.IO;					// File.ReadAllLines
+using System.Collections.Generic;	// List<>
+
+public class CommandClass : Command
+{
+	/* Defines how many recent quotes to remember (can be set to 0 for complete
+	 * randomness)
+	 *
+	 * Note: If this value is set too high compared to the total number of
+	 * quotes, the bot will appear to have a linear list of quotes
+	 */
+	const int MAX_RECENT = 5;
+
+	// The location of the quote list
+	const string QUOTELIST_PATH = "data/quotelist.txt";
+
+	// The list of recent quotes
+	List<string> recent = new List<string>();
+
+	// Holds all the quotes in memory
+	string[] quotes;
+
+	// A random number generator
+	Random r = new Random();
+
+	public void QuoteHandler(string username, string command, string message)
+	{
+		string quote = "";
+		bool isUnique = true;
+
+		// Get a unique quote
+		while (true)
+		{
+			// Get a quote from the list
+			quote = quotes[r.Next(quotes.Length)];
+			isUnique = true;
+
+			// Check if the quote has been used recently
+			foreach (String s in recent)
+			{
+				if (s.Equals(quote))
+				{
+					// Quote has been used recently, start the loop again
+					isUnique = false;
+					break;
+				}
+			}
+			if (!isUnique)
+				continue;
+
+			// Quote has not been used recently
+
+			// If the recent list is full, remove the oldest entry
+			if (recent.Count == MAX_RECENT)
+				recent.RemoveAt(0);
+
+			// Add this quote to the recent list
+			recent.Add(quote);
+			break;
+		}
+
+		// Send the quote
+        CommandAPI.SendMessage(String.Format(".me {0}", quote));
+	}
+
+	public void AddQuoteHandler(string command, string text)
+	{
+		// Add the quote to the file
+		StreamWriter writer = File.AppendText(QUOTELIST_PATH);
+		writer.WriteLine();
+		writer.Write(text);
+		writer.Close();
+
+		// Reload the file
+		quotes = File.ReadAllLines(QUOTELIST_PATH);
+
+		Console.WriteLine("Quote added");
+	}
+
+	public void ListQuoteHandler(string command, string text)
+	{
+		// Output all existing quotes
+		for (int i = 0; i < quotes.Length; i++)
+		{
+			Console.WriteLine("{0} - {1}", i+1, quotes[i]);
+		}
+	}
+
+	public void DelQuoteHandler(string command, string text)
+	{
+		// Make sure a valid quote was selected
+		try {
+			// Convert the argument to an integer
+			int index = Int32.Parse(text);
+
+			// Ensure a valid index has been specified
+			if (index > quotes.Length)
+			{
+				Console.WriteLine("Please enter a valid quote index. Use listquotes to see all quotes and their index");
+				return;
+			}
+
+			// Decrement the index to confirm with array indexing
+			index--;
+
+			// Convert the array to a list
+			List<string> tmplist = new List<string>();
+			for (int i = 0; i < quotes.Length; i++)
+			{
+				if (i!=index)
+					tmplist.Add(quotes[i]);
+			}
+
+			// Write all the quotes to a file
+			if (tmplist.Count < 1)
+			{
+				File.CreateText(QUOTELIST_PATH).Close();
+				return;
+			}
+
+			StreamWriter writer = File.CreateText(QUOTELIST_PATH);
+			writer.Write(tmplist[0]);
+			for (int i = 1; i < tmplist.Count; i++)
+			{
+				writer.WriteLine();
+				writer.Write(tmplist[i]);
+			}
+			writer.Close();
+		} catch (Exception e) {
+			// A non-integer value was passed as the parameter
+			Console.WriteLine("Please enter a valid quote index. Use listquotes to see all quotes and their index");
+		}
+
+		// Reload the quote list
+		quotes = File.ReadAllLines(QUOTELIST_PATH);
+
+		// Output to the user
+		Console.WriteLine("Quote removed");
+	}
+
+	public void setup()
+	{
+		// Read all the lines from quotelist.txt
+		quotes = File.ReadAllLines(QUOTELIST_PATH);
+
+		// Register the chat command handler
+		CommandAPI.AddChatHandler("quote", "Quotes a random quote", QuoteHandler);
+
+		// Register the console command handler(s)
+		CommandAPI.AddConsoleHandler("addquote", "Adds a quote to the list", AddQuoteHandler);
+		CommandAPI.AddConsoleHandler("listquotes", "Lists all quotes and their indexes", ListQuoteHandler);
+		CommandAPI.AddConsoleHandler("delquote", "Deletes a quote by index - use listquotes to find a quote's index", DelQuoteHandler);
+	}
+}

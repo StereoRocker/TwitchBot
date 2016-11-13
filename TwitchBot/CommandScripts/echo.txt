@@ -1,0 +1,32 @@
+﻿/* Changelog
+ * 0.1:		Initial release
+ */
+
+// Import the classes from the main executable
+using TwitchBot;
+
+using System;		// String.Format
+
+public class CommandClass : Command
+{
+	public void EchoHandler(string username, string command, string message)
+	{
+		// Ensure a message was specified
+		if (message == "")
+		{
+			CommandAPI.SendMessage(String.Format("You need to give me a phrase to echo, @{0}!", username));
+			return;
+		}
+
+		// Repeat what was sent to us
+        CommandAPI.SendMessage(String.Format("\"{0}\" - {1}", message, username));
+	}
+
+	public void setup()
+	{
+		// Register the chat command handler
+		CommandAPI.AddChatHandler("echo", "Repeats what you say to me", EchoHandler);
+
+		// Register the console command handler(s)
+	}
+}

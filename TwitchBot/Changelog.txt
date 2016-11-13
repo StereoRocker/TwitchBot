@@ -1,0 +1,14 @@
+﻿TwitchBot Changelog:
+
+0.3:
+ - Added 0.5 second delay before quitting to allow SendThread to catch up
+ - Added auto message to say "Goodnight, chat!" when the bot is quit
+ - Added "quitsilent" console command to quit without saying goodnight to chat
+
+
+0.2:
+ - Added automatic reconnection upon connection loss
+   Note: This should be cleaned up, it outputs to the console every second
+
+0.1:
+ - Initial release

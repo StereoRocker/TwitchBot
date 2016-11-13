@@ -1,0 +1,98 @@
+﻿/* Changelist
+ * 0.2:		Added the ability to add a QuickMessage from the console
+ * 0.1:		Initial release
+ */
+
+// Import the classes from the main executable
+using TwitchBot;
+
+using System;						// Random
+using System.IO;					// Files.ReadAllLines
+using System.Collections.Generic;	// List<>
+
+public class CommandClass : Command
+{
+
+	// The list of commands to respond to
+	Dictionary<string, string> commands = new Dictionary<string, string>();
+	object _commandlock = new object();
+	const string QUICKMESSAGE_PATH = "data/QuickMessages.ini";
+
+	public void QuickMessageHandler(string username, string command, string message)
+	{
+		lock (_commandlock)
+		{
+			if (commands.ContainsKey(command))
+			{
+				CommandAPI.SendMessage(commands[command]);
+			} else {
+				CommandAPI.SendMessage(String.Format("QuickMessage - Error: An unexpected error occured while executing !{0}. Send the developer a message!", command));
+			}
+		}
+	}
+
+	public void AddQMHandler(string command, string text)
+	{
+		// Parse the text, seperating it into 2 tokens
+		string[] tokens = text.Split(new char[] {' '}, 2);
+		if (tokens.Length < 2)
+		{
+			Console.WriteLine("The syntax for this command is \"addquickmessage <command> <text>\"");
+			return;
+		}
+
+		string cmd, message;
+		cmd = tokens[0];
+		message = tokens[1];
+
+		// Parse the ini file
+		iniParser ini = new iniParser(QUICKMESSAGE_PATH);
+
+		// Add the section and save the file
+		ini.addSection(cmd);
+		ini.setValue(cmd, "message", message);
+		ini.Save(QUICKMESSAGE_PATH);
+
+		ini.setValue(cmd, "help", "No help text was provided for this command");
+
+		// Add the values to the dictionary
+		commands.Add(cmd, ini.getValue(cmd, "message"));
+
+		// Add the handler
+		CommandAPI.AddChatHandler(cmd, ini.getValue(cmd, "help"), QuickMessageHandler);
+
+		// Inform the user they should add help text when the bot can be restarted
+		Console.WriteLine("QuickMessage added. Note: You should add help text for the command when you next quit.");
+	}
+
+	public void setup()
+	{
+		// Parse the ini file
+		iniParser ini = new iniParser(QUICKMESSAGE_PATH);
+
+		// Iterate through each section and add the handler for every section we can
+		foreach (String s in ini.getSectionList())
+		{
+			if (!ini.hasValue(s, "message"))
+			{
+				Console.WriteLine("QuickMessage - Error: {0} contained no message, skipping", s);
+				continue;
+			}
+
+			if (!ini.hasValue(s, "help"))
+			{
+				Console.WriteLine("QuickMessage - Warning: {0} contained no help text, setting to default", s);
+				ini.setValue(s, "help", "No help text was provided for this command");
+			}
+
+			// Add the command to the dictionary
+			commands.Add(s, ini.getValue(s, "message"));
+
+			// Add the handler for the command
+			CommandAPI.AddChatHandler(s, ini.getValue(s, "help"), QuickMessageHandler);
+		}
+
+		// Register the console command handler(s)
+		CommandAPI.AddConsoleHandler("addquickmessage", "Adds a QuickMessage", AddQMHandler);
+	}
+}

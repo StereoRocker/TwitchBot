@@ -1,0 +1,6 @@
+﻿"You should add quotes to this list" - StereoRocker 2016
+"This is a random quote" - StereoRocker 2016
+"We would have a random quote if we had a list!" - SharpTwibot 2016
+"I'm running out of quotes" - StereoRocker 2016
+"Making an entire quote list by yourself is hard" - StereoRocker 2016
+"I'd rather code than imagine quotes" - StereoRocker 2016

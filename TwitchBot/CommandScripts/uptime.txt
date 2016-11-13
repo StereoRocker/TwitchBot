@@ -1,0 +1,58 @@
+﻿/* Changelog
+ * 0.1:		Initial release
+ */
+
+// Import the classes from the main executable
+using TwitchBot;
+
+using System;		// String.Format
+
+public class CommandClass : Command
+{
+	DateTime starttime;
+	bool isAvailable = true;
+
+	public void UptimeHandler(string username, string command, string message)
+	{
+		// Calculate the uptime of the bot
+		TimeSpan span = DateTime.Now.Subtract(starttime);
+
+		// Format the uptime so it looks *click* NIIIIIIIICE
+		string msg;
+
+		if (isAvailable)
+		{
+			msg = String.Format("Stream has been up for {0}h {1}m", ((int)span.TotalHours).ToString("00"), span.Minutes.ToString("00"));
+		} else {
+			msg = String.Format("Uptime is not available right now, sorry @{0}!", username);
+		}
+
+		// Send the uptime
+        CommandAPI.SendMessage(msg);
+	}
+
+	public void UptimeOffHandler(string username, string command, string message)
+	{
+		// Check the user is a moderator
+		if (!CommandAPI.isMod(username))
+		{
+			CommandAPI.SendMessage(String.Format("You are not a moderator @{0}!", username));
+			return;
+		}
+
+		isAvailable = false;
+		CommandAPI.SendMessage("Uptime has been disabled");
+	}
+
+	public void setup()
+	{
+		// Get the current time
+		starttime = DateTime.Now;
+
+		// Register the chat command handler
+		CommandAPI.AddChatHandler("uptime", "The uptime of the stream", UptimeHandler);
+		CommandAPI.AddChatHandler("uptimeoff", "Sets uptime to unavailable", UptimeOffHandler, true);
+
+		// Register the console command handler(s)
+	}
+}
