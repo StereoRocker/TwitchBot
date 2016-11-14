@@ -1,0 +1,108 @@
+﻿/* Changelog
+ * 0.1:		Initial release
+ */
+
+// Import the classes from the main executable
+using TwitchBot;
+
+using System;		// String.Format
+
+public class CommandClass : Command
+{
+
+	int rip = 0;
+	DateTime addCooldown = DateTime.MinValue;
+	DateTime subCooldown = DateTime.MinValue;
+	const string STREAMER = "Shafournee";
+
+	// The cooldown for the Add and Subtract RIP commands in seconds
+	const int COOLDOWN = 10;
+
+	public void RipHandler(string username, string command, string message)
+	{
+		// Output the number of deaths
+		if (rip == 0)
+		{
+			CommandAPI.SendMessage(String.Format("Shafournee hasn't died yet this game!", STREAMER));
+			return;
+		}
+
+		if (rip == 1)
+		{
+			CommandAPI.SendMessage(String.Format("{0} has only died once this game so far.", STREAMER));
+			return;
+		}
+
+		CommandAPI.SendMessage(String.Format("{0} has died {1} times so far.", STREAMER, rip));
+	}
+
+	public void AddRipHandler(string username, string command, string message)
+	{
+		// Check the user is a moderator
+		if (!CommandAPI.isMod(username))
+		{
+			CommandAPI.SendMessage(String.Format("You are not a moderator @{0}!", username));
+			return;
+		}
+
+		// Ensure a RIP wasn't counted in the last 10 seconds
+		DateTime now = DateTime.Now;
+		if (now.Subtract(addCooldown).TotalSeconds < COOLDOWN)
+		{
+			return;
+		}
+		addCooldown = now;
+
+		// Add 1 to the rip counter
+		rip++;
+
+		// Call the RIP chat handler
+		RipHandler(username, command, message);
+	}
+
+	public void SubRipHandler(string username, string command, string message)
+	{
+		// Check the user is a moderator
+		if (!CommandAPI.isMod(username))
+		{
+			CommandAPI.SendMessage(String.Format("You are not a moderator @{0}!", username));
+			return;
+		}
+
+		// Ensure a RIP wasn't counted in the last 10 seconds
+		DateTime now = DateTime.Now;
+		if (now.Subtract(subCooldown).TotalSeconds < COOLDOWN)
+		{
+			return;
+		}
+		subCooldown = now;
+
+		// Remove 1 from the rip counter if the RIP counter is more than 0
+		if (rip > 0)
+			rip--;
+	}
+
+	public void ResetRipHandler(string username, string command, string message)
+	{
+		// Check the user is a moderator
+		if (!CommandAPI.isMod(username))
+		{
+			CommandAPI.SendMessage(String.Format("You are not a moderator @{0}!", username));
+			return;
+		}
+		
+		// Reset the RIP counter
+		rip = 0;
+	}
+
+	public void setup()
+	{
+		// Register the chat command handler
+		CommandAPI.AddChatHandler("rip", "I'll tell you how many times the streamer has died", RipHandler);
+		CommandAPI.AddChatHandler("addrip", "Adds 1 to the RIP counter", AddRipHandler, true);
+		CommandAPI.AddChatHandler("subrip", "Removes 1 from the RIP counter", SubRipHandler, true);
+		CommandAPI.AddChatHandler("resetrip", "Resets the RIP counter", ResetRipHandler, true);
+
+		// Register the console command handler(s)
+	}
+}
