@@ -1,4 +1,4 @@
-﻿/* Changelist
+﻿/* Changelog
  * 0.2:		Changed the output format to include "/me" as a prefix
  * 0.1:		Initial release
  */
