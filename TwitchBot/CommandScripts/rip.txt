@@ -95,6 +95,25 @@ public class CommandClass : Command
 		rip = 0;
 	}
 
+	public void SetRipHandler(string username, string command, string message)
+	{
+		// Check the user is a moderator
+		if (!CommandAPI.isMod(username))
+		{
+			CommandAPI.SendMessage(String.Format("You are not a moderator @{0}!", username));
+			return;
+		}
+		
+		// Try and parse the number to set the counter to
+		try {
+			rip = Int32.Parse(message);
+		} catch (Exception e)
+		{
+			CommandAPI.SendMessage(String.Format("Sorry @{0}, the argument was not formatted properly", username));
+			return;
+		}
+	}
+
 	public void setup()
 	{
 		// Register the chat command handler
