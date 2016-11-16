@@ -121,6 +121,7 @@ public class CommandClass : Command
 		CommandAPI.AddChatHandler("addrip", "Adds 1 to the RIP counter", AddRipHandler, true);
 		CommandAPI.AddChatHandler("subrip", "Removes 1 from the RIP counter", SubRipHandler, true);
 		CommandAPI.AddChatHandler("resetrip", "Resets the RIP counter", ResetRipHandler, true);
+		CommandAPI.AddChatHandler("setrip", "Sets the RIP counter", SetRipHandler, true);
 
 		// Register the console command handler(s)
 	}
